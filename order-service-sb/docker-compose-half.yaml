@@ -1,0 +1,26 @@
+version: '2.1'
+services:
+  order-db:
+    image: quay.io/debezium/example-postgres:1.8
+    ports:
+     - 5433:5432
+    healthcheck:
+      test: "pg_isready -U postgresuser -d orderdb"
+      interval: 2s
+      timeout: 20s
+      retries: 10
+    environment:
+     - POSTGRES_USER=postgresuser
+     - POSTGRES_PASSWORD=postgrespw
+     - POSTGRES_DB=orderdb
+     - PGPASSWORD=postgrespw
+  order-service:
+    image: quay.io/lordofthejars/order-service-sb:0.0.1-SNAPSHOT
+    ports:
+     - 8080:8080
+    links:
+     - order-db
+    depends_on:
+      order-db:
+        condition: service_healthy
+  

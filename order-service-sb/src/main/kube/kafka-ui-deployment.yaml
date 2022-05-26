@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-kube.yaml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: kafka-ui
+  name: kafka-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: kafka-ui
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose-kube.yaml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: kafka-ui
+    spec:
+      containers:
+        - env:
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: kafka:9092
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: local
+            - name: KAFKA_CLUSTERS_0_ZOOKEEPER
+              value: zookeeper:2181
+          image: provectuslabs/kafka-ui
+          name: kafka-ui
+          ports:
+            - containerPort: 8080
+          resources: {}
+      restartPolicy: Always
+status: {}

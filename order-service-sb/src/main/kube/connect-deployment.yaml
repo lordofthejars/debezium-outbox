@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-kube.yaml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: connect
+  name: connect
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: connect
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose-kube.yaml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: connect
+    spec:
+      containers:
+        - args:
+            - /opt/kafka/kafka_connect_run.sh
+          env:
+            - name: KAFKA_CONNECT_BOOTSTRAP_SERVERS
+              value: debezium-ca-j-rjtq-jjqrpbdukg.bf2.kafka.rhcloud.com:443
+            - name: KAFKA_CONNECT_TLS
+              value: 'true'
+            - name: KAFKA_CONNECT_SASL_MECHANISM
+              value: plain
+            - name: KAFKA_CONNECT_SASL_USERNAME
+              value: srvc-acct-c329deb0-1b91-4aaf-967a-a395c915105c
+            - name: KAFKA_CONNECT_SASL_PASSWORD
+              value: bebed36a-b4a4-4555-99ec-59e20b452ff2
+            - name: KAFKA_CONNECT_CONFIGURATION
+              value: |2
+              
+                key.converter=org.apache.kafka.connect.json.JsonConverter
+                value.converter=org.apache.kafka.connect.json.JsonConverter
+                key.converter.schemas.enable=false
+                value.converter.schemas.enable=false
+                group.id=connect
+                database.history.consumer.security.protocol: "SASL_SSL",
+                database.history.consumer.sasl.mechanism: "PLAIN",
+                database.history.consumer.sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"srvc-acct-c329deb0-1b91-4aaf-967a-a395c915105c\" password=\"bebed36a-b4a4-4555-99ec-59e20b452ff2\";",
+                database.history.producer.security.protocol: "SASL_SSL",
+                database.history.producer.sasl.mechanism: "PLAIN",
+                database.history.producer.sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"srvc-acct-c329deb0-1b91-4aaf-967a-a395c915105c\" password=\"bebed36a-b4a4-4555-99ec-59e20b452ff2\";",
+                offset.storage.topic=connect-offsets
+                offset.storage.replication.factor=1
+                config.storage.topic=connect-configs
+                config.storage.replication.factor=1
+                status.storage.topic=connect-status
+                status.storage.replication.factor=1
+                consumer.interceptor.classes=io.opentracing.contrib.kafka.TracingConsumerInterceptor
+                producer.interceptor.classes=io.opentracing.contrib.kafka.TracingProducerInterceptor
+            - name: KAFKA_LOG4J_OPTS
+              value: -Dlog4j.configuration=file:/opt/kafka/config/connect-log4j.properties
+          image: quay.io/lordofthejars/debizium-strimzi:1.0.0
+          name: connect
+          ports:
+            - containerPort: 8083
+          resources: {}
+      restartPolicy: Always
+status: {}

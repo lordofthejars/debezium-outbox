@@ -1,0 +1,91 @@
+version: '2.1'
+services:
+  zookeeper:
+    image: quay.io/debezium/zookeeper:1.8
+    ports:
+     - 2181:2181
+     - 2888:2888
+     - 3888:3888
+  kafka:
+    image: quay.io/debezium/kafka:1.8
+    ports:
+     - 9092:9092
+    links:
+     - zookeeper
+    environment:
+     - ZOOKEEPER_CONNECT=zookeeper:2181
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8090:8080"
+    links:
+    - zookeeper
+    - kafka
+    restart: always
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+  order-db:
+    image: quay.io/debezium/example-postgres:1.8
+    ports:
+     - 5433:5432
+    healthcheck:
+      test: "pg_isready -U postgresuser -d orderdb"
+      interval: 2s
+      timeout: 20s
+      retries: 10
+    environment:
+     - POSTGRES_USER=postgresuser
+     - POSTGRES_PASSWORD=postgrespw
+     - POSTGRES_DB=orderdb
+     - PGPASSWORD=postgrespw
+  connect:
+    image: debezium/strimzi-connect
+    build:
+      context: debezium-strimzi
+    ports:
+     - 8083:8083
+    links:
+     - kafka
+     - order-db
+    environment:
+     - KAFKA_LOG4J_OPTS=-Dlog4j.configuration=file:/opt/kafka/config/connect-log4j.properties
+     - KAFKA_CONNECT_BOOTSTRAP_SERVERS=kafka:9092
+     - |
+         KAFKA_CONNECT_CONFIGURATION=
+         key.converter=org.apache.kafka.connect.json.JsonConverter
+         value.converter=org.apache.kafka.connect.json.JsonConverter
+         key.converter.schemas.enable=false
+         value.converter.schemas.enable=false
+         group.id=connect
+         offset.storage.topic=connect-offsets
+         offset.storage.replication.factor=1
+         config.storage.topic=connect-configs
+         config.storage.replication.factor=1
+         status.storage.topic=connect-status
+         status.storage.replication.factor=1
+         consumer.interceptor.classes=io.opentracing.contrib.kafka.TracingConsumerInterceptor
+         producer.interceptor.classes=io.opentracing.contrib.kafka.TracingProducerInterceptor
+    command: /opt/kafka/kafka_connect_run.sh
+  order-service:
+    image: quay.io/lordofthejars/order-service-sb:0.0.1-SNAPSHOT
+    ports:
+     - 8080:8080
+    links:
+     - kafka
+     - order-db
+    depends_on:
+      order-db:
+        condition: service_healthy
+      connect:
+        condition: service_started
+  shipment-service:
+    image: quay.io/lordofthejars/shipment-service-sb:0.0.1-SNAPSHOT
+    links:
+     - kafka
+    depends_on:
+      connect:
+        condition: service_started
+  

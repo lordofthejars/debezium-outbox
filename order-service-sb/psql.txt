@@ -1,0 +1,10 @@
+http PUT http://localhost:8083/connectors/outbox-connector/config < src/main/resources/data/register-postgres.json
+
+http POST http://localhost:8080/orders < src/main/resources/data/create-order-request.json
+
+
+psql -d orderdb -U postgresuser
+
+select * from inventory.purchase_order;
+select * from inventory.order_lines;
+select * from inventory.outboxevent;
