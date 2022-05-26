@@ -69,6 +69,18 @@ services:
          consumer.interceptor.classes=io.opentracing.contrib.kafka.TracingConsumerInterceptor
          producer.interceptor.classes=io.opentracing.contrib.kafka.TracingProducerInterceptor
     command: /opt/kafka/kafka_connect_run.sh
+  debezium-ui:
+    container_name: debezium-ui
+    image: quay.io/debezium/debezium-ui:1.8
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CONNECT_URIS=http://connect:8083
+    links:
+     - connect
+    depends_on:
+      connect:
+        condition: service_started
   order-service:
     image: quay.io/lordofthejars/order-service-sb:0.0.1-SNAPSHOT
     ports:
